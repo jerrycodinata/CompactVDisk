@@ -36,11 +36,11 @@ pub fn get_wsl_distros() -> Vec<(String, String)> {
 
     match output {
         Ok(out) => {
-            let stdout_str = String::from_utf8_lossy(&out.stdout).to_string();
-            if stdout_str.trim().is_empty() {
+            if out.stdout.contains(&0) {
                 let utf16_str = parse_utf16le(&out.stdout);
                 parse_wsl_list_output(&utf16_str)
             } else {
+                let stdout_str = String::from_utf8_lossy(&out.stdout).to_string();
                 parse_wsl_list_output(&stdout_str)
             }
         }

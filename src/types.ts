@@ -2,7 +2,7 @@ export type DiskFormat = 'Vhdx' | 'Vmdk' | 'Vdi' | 'Unknown';
 export type DiskType = 'Wsl' | 'Docker' | 'Custom';
 
 export interface DiskInfo {
-  id: String;
+  id: string;
   name: string;
   path: string;
   format: DiskFormat;

@@ -3,7 +3,8 @@ use crate::models::{CompactLogEvent, CompactionResult, DiskFormat};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::{Command, Stdio};
+use std::process::{Child, Command, Stdio};
+use std::thread;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
 
@@ -47,6 +48,53 @@ pub fn build_compaction_commands(path: &str) -> Result<(String, Vec<Vec<String>>
             ))
         }
         DiskFormat::Unknown => Err(format!("Unsupported disk format for path: {}", path)),
+    }
+}
+
+fn stream_child_output(app: &AppHandle, disk_id: &str, child: &mut Child) {
+    let app_handle = app.clone();
+    let disk_id_stdout = disk_id.to_string();
+
+    let stdout_handle = child.stdout.take().map(|stdout| {
+        thread::spawn(move || {
+            let reader = BufReader::new(stdout);
+            for line in reader.lines().flatten() {
+                let _ = app_handle.emit(
+                    "compact-log",
+                    CompactLogEvent {
+                        disk_id: disk_id_stdout.clone(),
+                        line,
+                        is_error: false,
+                    },
+                );
+            }
+        })
+    });
+
+    let app_handle_err = app.clone();
+    let disk_id_stderr = disk_id.to_string();
+
+    let stderr_handle = child.stderr.take().map(|stderr| {
+        thread::spawn(move || {
+            let reader = BufReader::new(stderr);
+            for line in reader.lines().flatten() {
+                let _ = app_handle_err.emit(
+                    "compact-log",
+                    CompactLogEvent {
+                        disk_id: disk_id_stderr.clone(),
+                        line,
+                        is_error: true,
+                    },
+                );
+            }
+        })
+    });
+
+    if let Some(handle) = stdout_handle {
+        let _ = handle.join();
+    }
+    if let Some(handle) = stderr_handle {
+        let _ = handle.join();
     }
 }
 
@@ -101,7 +149,7 @@ pub async fn execute_compaction(
 
             let script_content = generate_diskpart_script(&path_str);
             let temp_dir = std::env::temp_dir();
-            let script_path = temp_dir.join("compact_vdisk_script.txt");
+            let script_path = temp_dir.join(format!("compact_vdisk_{}.txt", std::process::id()));
 
             if let Err(e) = fs::write(&script_path, &script_content) {
                 let err_msg = format!("Failed to write diskpart script: {}", e);
@@ -119,12 +167,7 @@ pub async fn execute_compaction(
                 .spawn()
                 .map_err(|e| format!("Failed to execute diskpart.exe: {}", e))?;
 
-            if let Some(stdout) = child.stdout.take() {
-                let reader = BufReader::new(stdout);
-                for line in reader.lines().flatten() {
-                    emit_log(&app, line, false);
-                }
-            }
+            stream_child_output(&app, &disk_id, &mut child);
 
             let status = child.wait().map_err(|e| format!("diskpart.exe execution failed: {}", e))?;
             let _ = fs::remove_file(&script_path);
@@ -136,7 +179,7 @@ pub async fn execute_compaction(
         }
         DiskFormat::Vmdk => {
             emit_log(&app, format!("Executing: vmware-vdiskmanager -k {}", path_str), false);
-            let mut child = Command::new("vmware-vdiskmanager")
+            let child = Command::new("vmware-vdiskmanager")
                 .arg("-k")
                 .arg(&path_str)
                 .stdout(Stdio::piped())
@@ -145,12 +188,7 @@ pub async fn execute_compaction(
 
             match child {
                 Ok(mut proc) => {
-                    if let Some(stdout) = proc.stdout.take() {
-                        let reader = BufReader::new(stdout);
-                        for line in reader.lines().flatten() {
-                            emit_log(&app, line, false);
-                        }
-                    }
+                    stream_child_output(&app, &disk_id, &mut proc);
                     let status = proc.wait().map_err(|e| format!("vmware-vdiskmanager failed: {}", e))?;
                     if !status.success() {
                         success = false;
@@ -168,12 +206,7 @@ pub async fn execute_compaction(
 
                     match qemu_res {
                         Ok(mut proc) => {
-                            if let Some(stdout) = proc.stdout.take() {
-                                let reader = BufReader::new(stdout);
-                                for line in reader.lines().flatten() {
-                                    emit_log(&app, line, false);
-                                }
-                            }
+                            stream_child_output(&app, &disk_id, &mut proc);
                             let status = proc.wait().map_err(|e| format!("qemu-img failed: {}", e))?;
                             if status.success() {
                                 let _ = fs::rename(&temp_vmdk, &path_str);
@@ -202,12 +235,7 @@ pub async fn execute_compaction(
 
             match child {
                 Ok(mut proc) => {
-                    if let Some(stdout) = proc.stdout.take() {
-                        let reader = BufReader::new(stdout);
-                        for line in reader.lines().flatten() {
-                            emit_log(&app, line, false);
-                        }
-                    }
+                    stream_child_output(&app, &disk_id, &mut proc);
                     let status = proc.wait().map_err(|e| format!("vboxmanage failed: {}", e))?;
                     if !status.success() {
                         success = false;

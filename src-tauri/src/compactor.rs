@@ -4,7 +4,6 @@ use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
 use std::process::{Child, Command, Stdio};
-use std::sync::Arc;
 use std::thread;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};

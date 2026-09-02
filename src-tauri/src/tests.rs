@@ -43,6 +43,32 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_disk_name() {
+        use crate::disk_inspector::clean_disk_name;
+
+        assert_eq!(
+            clean_disk_name("CanonicalGroupLimited.Ubuntu22.04LTS_79rhkp1fndgsc", "C:\\AppData\\ext4.vhdx"),
+            "Ubuntu 22.04 LTS"
+        );
+        assert_eq!(
+            clean_disk_name("docker-desktop-data", "C:\\Docker\\wsl\\data\\ext4.vhdx"),
+            "Docker Desktop Data"
+        );
+        assert_eq!(
+            clean_disk_name("docker-desktop", "C:\\Docker\\wsl\\distro\\ext4.vhdx"),
+            "Docker Desktop Engine"
+        );
+        assert_eq!(
+            clean_disk_name("TheDebianProject.DebianGNULinux_79rhkp1fndgsc", "C:\\Debian\\ext4.vhdx"),
+            "Debian GNU/Linux"
+        );
+        assert_eq!(
+            clean_disk_name("ext4.vhdx", "C:\\Users\\test\\AppData\\Local\\wsl\\Ubuntu\\ext4.vhdx"),
+            "Ubuntu"
+        );
+    }
+
+    #[test]
     fn test_find_vhdx_in_dir_structure() {
         use crate::wsl_discovery::find_vhdx_for_wsl_in_dir;
         use std::fs::{create_dir_all, File};
@@ -57,6 +83,19 @@ mod tests {
 
         let found = find_vhdx_for_wsl_in_dir("Ubuntu", lad);
         assert_eq!(found, Some(vhdx_file));
+
+        let docker_data_dir = lad.join("Docker").join("wsl").join("data");
+        create_dir_all(&docker_data_dir).unwrap();
+        let docker_data_file = docker_data_dir.join("ext4.vhdx");
+        File::create(&docker_data_file).unwrap();
+
+        let docker_distro_dir = lad.join("Docker").join("wsl").join("distro");
+        create_dir_all(&docker_distro_dir).unwrap();
+        let docker_distro_file = docker_distro_dir.join("ext4.vhdx");
+        File::create(&docker_distro_file).unwrap();
+
+        assert_eq!(find_vhdx_for_wsl_in_dir("docker-desktop-data", lad), Some(docker_data_file));
+        assert_eq!(find_vhdx_for_wsl_in_dir("docker-desktop", lad), Some(docker_distro_file));
     }
 
     #[test]

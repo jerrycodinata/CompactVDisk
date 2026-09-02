@@ -1,9 +1,10 @@
+use crate::admin::create_command;
 use crate::disk_inspector::{detect_format, format_size};
 use crate::models::{CompactLogEvent, CompactionResult, DiskFormat};
 use std::fs;
 use std::io::{BufRead, BufReader};
 use std::path::Path;
-use std::process::{Child, Command, Stdio};
+use std::process::{Child, Stdio};
 use std::thread;
 use std::time::Instant;
 use tauri::{AppHandle, Emitter};
@@ -134,7 +135,7 @@ pub async fn execute_compaction(
     match format {
         DiskFormat::Vhdx => {
             emit_log(&app, "Executing: wsl.exe --shutdown".to_string(), false);
-            let shutdown_res = Command::new("wsl.exe").arg("--shutdown").output();
+            let shutdown_res = create_command("wsl.exe").arg("--shutdown").output();
             match shutdown_res {
                 Ok(out) => {
                     let stdout = String::from_utf8_lossy(&out.stdout);
@@ -159,7 +160,7 @@ pub async fn execute_compaction(
 
             emit_log(&app, format!("Executing: diskpart.exe /s {}", script_path.display()), false);
 
-            let mut child = Command::new("diskpart.exe")
+            let mut child = create_command("diskpart.exe")
                 .arg("/s")
                 .arg(&script_path)
                 .stdout(Stdio::piped())
@@ -179,7 +180,7 @@ pub async fn execute_compaction(
         }
         DiskFormat::Vmdk => {
             emit_log(&app, format!("Executing: vmware-vdiskmanager -k {}", path_str), false);
-            let child = Command::new("vmware-vdiskmanager")
+            let child = create_command("vmware-vdiskmanager")
                 .arg("-k")
                 .arg(&path_str)
                 .stdout(Stdio::piped())
@@ -198,7 +199,7 @@ pub async fn execute_compaction(
                 Err(_) => {
                     emit_log(&app, "vmware-vdiskmanager not found. Attempting qemu-img convert...".to_string(), false);
                     let temp_vmdk = format!("{}.compact.tmp", path_str);
-                    let qemu_res = Command::new("qemu-img")
+                    let qemu_res = create_command("qemu-img")
                         .args(["convert", "-O", "vmdk", "-c", &path_str, &temp_vmdk])
                         .stdout(Stdio::piped())
                         .stderr(Stdio::piped())
@@ -227,7 +228,7 @@ pub async fn execute_compaction(
         }
         DiskFormat::Vdi => {
             emit_log(&app, format!("Executing: vboxmanage modifymedium disk {} --compact", path_str), false);
-            let child = Command::new("vboxmanage")
+            let child = create_command("vboxmanage")
                 .args(["modifymedium", "disk", &path_str, "--compact"])
                 .stdout(Stdio::piped())
                 .stderr(Stdio::piped())

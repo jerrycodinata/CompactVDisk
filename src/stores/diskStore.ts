@@ -26,6 +26,14 @@ export function useDiskStore() {
     }
   }
 
+  async function relaunchAsAdmin() {
+    try {
+      await invoke<boolean>('relaunch_as_admin');
+    } catch (e) {
+      console.error('Failed to relaunch as admin:', e);
+    }
+  }
+
   async function checkTools() {
     try {
       toolAvailability.value = await invoke<ToolAvailability>('check_tools');
@@ -118,6 +126,7 @@ export function useDiskStore() {
     isResultModalOpen,
     errorMsg,
     checkAdminStatus,
+    relaunchAsAdmin,
     checkTools,
     fetchDisks,
     inspectAndAddCustomDisk,

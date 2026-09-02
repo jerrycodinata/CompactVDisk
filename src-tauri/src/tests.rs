@@ -43,6 +43,23 @@ mod tests {
     }
 
     #[test]
+    fn test_find_vhdx_in_dir_structure() {
+        use crate::wsl_discovery::find_vhdx_for_wsl_in_dir;
+        use std::fs::{create_dir_all, File};
+
+        let temp_dir = tempfile::tempdir().unwrap();
+        let lad = temp_dir.path();
+
+        let wsl_distro_dir = lad.join("wsl").join("Ubuntu");
+        create_dir_all(&wsl_distro_dir).unwrap();
+        let vhdx_file = wsl_distro_dir.join("ext4.vhdx");
+        File::create(&vhdx_file).unwrap();
+
+        let found = find_vhdx_for_wsl_in_dir("Ubuntu", lad);
+        assert_eq!(found, Some(vhdx_file));
+    }
+
+    #[test]
     fn test_build_compaction_commands() {
         let vhdx_cmd = build_compaction_commands("C:\\disk.vhdx").unwrap();
         assert_eq!(vhdx_cmd.0, "diskpart");

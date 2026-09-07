@@ -62,9 +62,16 @@
 
         <div class="flex items-center gap-2 shrink-0">
           <button
+            @click.stop="$emit('show-details', disk)"
+            class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 rounded-md transition cursor-pointer"
+          >
+            <Info class="w-3.5 h-3.5 text-sky-400" />
+            Details
+          </button>
+          <button
             @click.stop="$emit('compact', disk)"
             :disabled="isCompacting"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md transition disabled:opacity-50"
+            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 text-white rounded-md transition disabled:opacity-50 cursor-pointer"
           >
             <Zap class="w-3.5 h-3.5 fill-current" />
             Compact
@@ -72,7 +79,7 @@
           <button
             @click.stop="$emit('remove', disk.path)"
             :disabled="isCompacting"
-            class="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/30 rounded transition disabled:opacity-50"
+            class="p-1.5 text-gray-400 hover:text-red-400 hover:bg-red-950/30 rounded transition disabled:opacity-50 cursor-pointer"
             title="Remove from list"
           >
             <Trash2 class="w-4 h-4" />
@@ -85,7 +92,7 @@
 
 <script setup lang="ts">
 import { ref } from 'vue';
-import { FolderPlus, FileSearch, UploadCloud, Zap, Trash2 } from 'lucide-vue-next';
+import { FolderPlus, FileSearch, UploadCloud, Zap, Trash2, Info } from 'lucide-vue-next';
 import { open } from '@tauri-apps/plugin-dialog';
 import type { DiskInfo } from '../types';
 
@@ -98,6 +105,7 @@ const emit = defineEmits<{
   (e: 'add-path', path: string): void;
   (e: 'remove', path: string): void;
   (e: 'compact', disk: DiskInfo): void;
+  (e: 'show-details', disk: DiskInfo): void;
 }>();
 
 const isDragging = ref(false);

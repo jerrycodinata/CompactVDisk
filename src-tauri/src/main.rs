@@ -1,4 +1,6 @@
-use compact_vdisk_lib::admin::{check_admin_privileges, get_tool_availability};
+#![windows_subsystem = "windows"]
+
+use compact_vdisk_lib::admin::{check_admin_privileges, get_tool_availability, relaunch_as_administrator};
 use compact_vdisk_lib::compactor::execute_compaction;
 use compact_vdisk_lib::disk_inspector::get_disk_info;
 use compact_vdisk_lib::models::{CompactionResult, DiskInfo, DiskType, ToolAvailability};
@@ -8,6 +10,11 @@ use tauri::AppHandle;
 #[tauri::command]
 fn check_admin() -> bool {
     check_admin_privileges()
+}
+
+#[tauri::command]
+fn relaunch_as_admin() -> bool {
+    relaunch_as_administrator()
 }
 
 #[tauri::command]
@@ -31,11 +38,21 @@ async fn compact_disk(app: AppHandle, disk_id: String, path: String) -> Result<C
 }
 
 fn main() {
+    #[cfg(target_os = "windows")]
+    {
+        if !check_admin_privileges() {
+            if relaunch_as_administrator() {
+                std::process::exit(0);
+            }
+        }
+    }
+
     tauri::Builder::default()
         .plugin(tauri_plugin_dialog::init())
         .plugin(tauri_plugin_shell::init())
         .invoke_handler(tauri::generate_handler![
             check_admin,
+            relaunch_as_admin,
             check_tools,
             discover_disks,
             inspect_disk,

@@ -43,7 +43,7 @@
 
     <!-- Main Content Area -->
     <main class="flex-1 max-w-5xl w-full mx-auto p-6">
-      <AdminBanner :is-admin="isAdmin" />
+      <AdminBanner :is-admin="isAdmin" @relaunch="relaunchAsAdmin" />
 
       <div v-if="errorMsg" class="bg-red-950/60 border border-red-800/80 rounded-xl p-4 text-red-200 text-sm mb-6 flex items-start justify-between gap-3">
         <div class="flex items-center gap-2">
@@ -58,6 +58,7 @@
         :is-compacting="isCompacting"
         @refresh="fetchDisks"
         @compact="startCompaction"
+        @show-details="selectedDiskForDetails = $event"
       />
 
       <CustomDiskSelector
@@ -66,6 +67,7 @@
         @add-path="handleAddPath"
         @remove="removeCustomDisk"
         @compact="startCompaction"
+        @show-details="selectedDiskForDetails = $event"
       />
 
       <TerminalLog
@@ -81,6 +83,13 @@
       @close="closeResultModal"
     />
 
+    <!-- Disk Details Modal -->
+    <DetailsModal
+      :disk="selectedDiskForDetails"
+      @close="selectedDiskForDetails = null"
+      @compact="startCompaction"
+    />
+
     <footer class="border-t border-gray-800 py-4 px-6 text-center text-xs text-gray-500">
       CompactVdisk &copy; {{ new Date().getFullYear() }} &bull; Tauri v2 + Vue 3 + Tailwind CSS
     </footer>
@@ -88,15 +97,19 @@
 </template>
 
 <script setup lang="ts">
-import { onMounted } from 'vue';
+import { ref, onMounted } from 'vue';
 import { Disc3, AlertTriangle } from 'lucide-vue-next';
 import { useDiskStore } from './stores/diskStore';
+import type { DiskInfo } from './types';
 
 import AdminBanner from './components/AdminBanner.vue';
 import AutoDiscoveryDashboard from './components/AutoDiscoveryDashboard.vue';
 import CustomDiskSelector from './components/CustomDiskSelector.vue';
 import TerminalLog from './components/TerminalLog.vue';
 import ResultsModal from './components/ResultsModal.vue';
+import DetailsModal from './components/DetailsModal.vue';
+
+const selectedDiskForDetails = ref<DiskInfo | null>(null);
 
 const {
   discoveredDisks,
@@ -109,6 +122,7 @@ const {
   isResultModalOpen,
   errorMsg,
   checkAdminStatus,
+  relaunchAsAdmin,
   checkTools,
   fetchDisks,
   inspectAndAddCustomDisk,

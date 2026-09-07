@@ -56,14 +56,23 @@
             <span class="text-sm font-bold text-sky-400 font-mono">{{ disk.size_formatted }}</span>
           </div>
 
-          <button
-            @click="$emit('compact', disk)"
-            :disabled="isCompacting"
-            class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed shadow"
-          >
-            <Zap class="w-3.5 h-3.5 fill-current" />
-            Compact Disk
-          </button>
+          <div class="flex items-center gap-2">
+            <button
+              @click="$emit('show-details', disk)"
+              class="flex items-center gap-1 px-2.5 py-1.5 text-xs font-medium bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white border border-gray-700/60 rounded-md transition cursor-pointer"
+            >
+              <Info class="w-3.5 h-3.5 text-sky-400" />
+              Details
+            </button>
+            <button
+              @click="$emit('compact', disk)"
+              :disabled="isCompacting"
+              class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold bg-sky-600 hover:bg-sky-500 active:bg-sky-700 text-white rounded-md transition disabled:opacity-50 disabled:cursor-not-allowed shadow cursor-pointer"
+            >
+              <Zap class="w-3.5 h-3.5 fill-current" />
+              Compact Disk
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -71,7 +80,7 @@
 </template>
 
 <script setup lang="ts">
-import { HardDrive, RefreshCw, Zap } from 'lucide-vue-next';
+import { HardDrive, RefreshCw, Zap, Info } from 'lucide-vue-next';
 import type { DiskInfo } from '../types';
 
 defineProps<{
@@ -82,5 +91,6 @@ defineProps<{
 defineEmits<{
   (e: 'refresh'): void;
   (e: 'compact', disk: DiskInfo): void;
+  (e: 'show-details', disk: DiskInfo): void;
 }>();
 </script>

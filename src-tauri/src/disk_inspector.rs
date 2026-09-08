@@ -38,57 +38,57 @@ pub fn clean_disk_name(raw_name: &str, path_str: &str) -> String {
     let lower_raw = raw_name.to_lowercase();
     let lower_path = path_str.to_lowercase();
 
-    if lower_raw.contains("docker") || lower_path.contains("docker") {
+    if lower_raw.contains("docker") || lower_path.contains("docker\\wsl") || lower_path.contains("docker/wsl") {
         if lower_raw.contains("data") || lower_path.contains("wsl\\data") || lower_path.contains("wsl/data") {
             return "Docker Desktop Data".to_string();
         }
-        if lower_raw.contains("distro") || lower_path.contains("wsl\\distro") || lower_path.contains("wsl/distro") {
+        if lower_raw.contains("distro") || lower_raw.contains("engine") || lower_path.contains("wsl\\distro") || lower_path.contains("wsl/distro") {
             return "Docker Desktop Engine".to_string();
         }
         return "Docker Desktop".to_string();
     }
 
-    if lower_raw.contains("ubuntu") || lower_path.contains("ubuntu") {
-        if lower_raw.contains("24.04") || lower_path.contains("24.04") {
+    if lower_raw.contains("ubuntu") {
+        if lower_raw.contains("24.04") {
             return "Ubuntu 24.04 LTS".to_string();
         }
-        if lower_raw.contains("22.04") || lower_path.contains("22.04") {
+        if lower_raw.contains("22.04") {
             return "Ubuntu 22.04 LTS".to_string();
         }
-        if lower_raw.contains("20.04") || lower_path.contains("20.04") {
+        if lower_raw.contains("20.04") {
             return "Ubuntu 20.04 LTS".to_string();
         }
-        if lower_raw.contains("18.04") || lower_path.contains("18.04") {
+        if lower_raw.contains("18.04") {
             return "Ubuntu 18.04 LTS".to_string();
         }
         return "Ubuntu".to_string();
     }
 
-    if lower_raw.contains("debian") || lower_path.contains("debian") {
+    if lower_raw.contains("debian") {
         return "Debian GNU/Linux".to_string();
     }
 
-    if lower_raw.contains("kali") || lower_path.contains("kali") {
+    if lower_raw.contains("kali") {
         return "Kali Linux".to_string();
     }
 
-    if lower_raw.contains("alpine") || lower_path.contains("alpine") {
+    if lower_raw.contains("alpine") {
         return "Alpine Linux".to_string();
     }
 
-    if lower_raw.contains("arch") || lower_path.contains("arch") {
+    if lower_raw.contains("arch") {
         return "Arch Linux".to_string();
     }
 
-    if lower_raw.contains("rhel") || lower_path.contains("rhel") || lower_raw.contains("redhat") {
+    if lower_raw.contains("rhel") || lower_raw.contains("redhat") {
         return "Red Hat Enterprise Linux".to_string();
     }
 
-    if lower_raw.contains("fedora") || lower_path.contains("fedora") {
+    if lower_raw.contains("fedora") {
         return "Fedora".to_string();
     }
 
-    if lower_raw.contains("opensuse") || lower_path.contains("suse") {
+    if lower_raw.contains("opensuse") || lower_raw.contains("suse") {
         return "openSUSE".to_string();
     }
 
@@ -106,20 +106,18 @@ pub fn clean_disk_name(raw_name: &str, path_str: &str) -> String {
         || raw_name.eq_ignore_ascii_case("disk.vhdx")
         || (raw_name.starts_with('{') && raw_name.ends_with('}'))
     {
-        let p = Path::new(path_str);
+        let normalized_path = path_str.replace('\\', "/");
+        let p = Path::new(&normalized_path);
         if let Some(parent) = p.parent() {
-            if let Some(dir_name) = parent.file_name() {
-                let name_str = dir_name.to_string_lossy();
-                if !name_str.is_empty() && name_str != "LocalState" && name_str != "wsl" {
-                    return clean_disk_name(&name_str, path_str);
+            let mut candidate_parent = parent.file_name().map(|n| n.to_string_lossy());
+            if candidate_parent.as_deref() == Some("LocalState") {
+                if let Some(grandparent) = parent.parent() {
+                    candidate_parent = grandparent.file_name().map(|n| n.to_string_lossy());
                 }
             }
-            if let Some(grandparent) = parent.parent() {
-                if let Some(gp_name) = grandparent.file_name() {
-                    let gp_str = gp_name.to_string_lossy();
-                    if !gp_str.is_empty() {
-                        return clean_disk_name(&gp_str, path_str);
-                    }
+            if let Some(dir_name) = candidate_parent {
+                if !dir_name.is_empty() && dir_name != "wsl" {
+                    return clean_disk_name(&dir_name, path_str);
                 }
             }
         }

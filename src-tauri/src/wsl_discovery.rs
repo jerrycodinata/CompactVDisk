@@ -106,18 +106,11 @@ pub fn find_vhdx_for_wsl_in_dir(distro_name: &str, local_app_data: &Path) -> Opt
     None
 }
 
-pub fn get_candidate_local_appdata_dirs() -> Vec<PathBuf> {
+pub fn get_candidate_user_profile_dirs() -> Vec<PathBuf> {
     let mut dirs = Vec::new();
 
-    if let Ok(lad) = env::var("LOCALAPPDATA") {
-        let p = PathBuf::from(lad);
-        if p.exists() && !dirs.contains(&p) {
-            dirs.push(p);
-        }
-    }
-
     if let Ok(up) = env::var("USERPROFILE") {
-        let p = PathBuf::from(up).join("AppData").join("Local");
+        let p = PathBuf::from(up);
         if p.exists() && !dirs.contains(&p) {
             dirs.push(p);
         }
@@ -128,13 +121,30 @@ pub fn get_candidate_local_appdata_dirs() -> Vec<PathBuf> {
         if let Ok(entries) = fs::read_dir(users_dir) {
             for entry in entries.flatten() {
                 let user_folder = entry.path();
-                if user_folder.is_dir() {
-                    let lad = user_folder.join("AppData").join("Local");
-                    if lad.exists() && !dirs.contains(&lad) {
-                        dirs.push(lad);
-                    }
+                if user_folder.is_dir() && !dirs.contains(&user_folder) {
+                    dirs.push(user_folder);
                 }
             }
+        }
+    }
+
+    dirs
+}
+
+pub fn get_candidate_local_appdata_dirs() -> Vec<PathBuf> {
+    let mut dirs = Vec::new();
+
+    if let Ok(lad) = env::var("LOCALAPPDATA") {
+        let p = PathBuf::from(lad);
+        if p.exists() && !dirs.contains(&p) {
+            dirs.push(p);
+        }
+    }
+
+    for user_profile in get_candidate_user_profile_dirs() {
+        let lad = user_profile.join("AppData").join("Local");
+        if lad.exists() && !dirs.contains(&lad) {
+            dirs.push(lad);
         }
     }
 
@@ -332,8 +342,11 @@ pub fn discover_disks() -> Vec<DiskInfo> {
         PathBuf::from("C:\\WSL"),
         PathBuf::from("D:\\WSL"),
     ];
-    if let Ok(up) = env::var("USERPROFILE") {
-        custom_wsl_dirs.push(PathBuf::from(up).join("wsl"));
+    for up_path in get_candidate_user_profile_dirs() {
+        let user_wsl = up_path.join("wsl");
+        if !custom_wsl_dirs.contains(&user_wsl) {
+            custom_wsl_dirs.push(user_wsl);
+        }
     }
 
     for dir in custom_wsl_dirs {
@@ -362,8 +375,7 @@ pub fn discover_disks() -> Vec<DiskInfo> {
         }
     }
 
-    if let Ok(up) = env::var("USERPROFILE") {
-        let up_path = PathBuf::from(up);
+    for up_path in get_candidate_user_profile_dirs() {
         let vbox_dir = up_path.join("VirtualBox VMs");
         if vbox_dir.exists() {
             let mut found = Vec::new();

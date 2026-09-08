@@ -24,6 +24,19 @@ mod tests {
     }
 
     #[test]
+    fn test_clean_disk_name_path_isolation() {
+        use crate::disk_inspector::clean_disk_name;
+
+        // Path contains 'archive' or 'research', but filename is my-disk.vhdx or vm.vdi
+        assert_eq!(clean_disk_name("my-disk.vhdx", "D:\\archive\\my-disk.vhdx"), "my-disk.vhdx");
+        assert_eq!(clean_disk_name("vm.vdi", "C:\\research\\vm.vdi"), "vm.vdi");
+
+        // Actual distro name in raw_name
+        assert_eq!(clean_disk_name("Ubuntu-22.04", "C:\\Users\\test\\disk.vhdx"), "Ubuntu 22.04 LTS");
+        assert_eq!(clean_disk_name("arch", "C:\\Users\\test\\ext4.vhdx"), "Arch Linux");
+    }
+
+    #[test]
     fn test_generate_diskpart_script() {
         let path = "C:\\Users\\test\\AppData\\Local\\Docker\\wsl\\data\\ext4.vhdx";
         let script = generate_diskpart_script(path);

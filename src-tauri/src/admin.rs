@@ -19,12 +19,13 @@ pub fn relaunch_as_administrator() -> bool {
     {
         if let Ok(exe_path) = std::env::current_exe() {
             let exe_str = exe_path.to_string_lossy().to_string();
+            let safe_exe_str = exe_str.replace('\'', "''");
             let mut cmd = create_command("powershell.exe");
             cmd.args([
                 "-NoProfile",
                 "-NonInteractive",
                 "-Command",
-                &format!("Start-Process -FilePath \"{}\" -Verb RunAs", exe_str),
+                &format!("Start-Process -FilePath '{}' -ArgumentList '--elevated' -Verb RunAs", safe_exe_str),
             ]);
             if let Ok(mut child) = cmd.spawn() {
                 let status = child.wait();
@@ -51,6 +52,18 @@ pub fn is_tool_in_path(tool_name: &str) -> bool {
 pub fn check_admin_privileges() -> bool {
     #[cfg(target_os = "windows")]
     {
+        if std::env::args().any(|a| a == "--elevated") {
+            return true;
+        }
+
+        if create_command("fltmc")
+            .output()
+            .map(|out| out.status.success())
+            .unwrap_or(false)
+        {
+            return true;
+        }
+
         create_command("net")
             .arg("session")
             .output()

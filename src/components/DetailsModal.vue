@@ -100,7 +100,8 @@
         </button>
         <button
           @click="$emit('compact', disk); $emit('close')"
-          class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow cursor-pointer"
+          :disabled="isCompacting"
+          class="px-4 py-2 bg-sky-600 hover:bg-sky-500 text-white text-xs font-semibold rounded-lg transition flex items-center gap-1.5 shadow cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
         >
           <Zap class="w-3.5 h-3.5 fill-current" />
           Compact This Disk
@@ -117,6 +118,7 @@ import type { DiskInfo } from '../types';
 
 const props = defineProps<{
   disk: DiskInfo | null;
+  isCompacting?: boolean;
 }>();
 
 defineEmits<{

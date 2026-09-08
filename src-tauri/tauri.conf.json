@@ -12,6 +12,7 @@
   "app": {
     "windows": [
       {
+        "label": "main",
         "title": "CompactVdisk - Virtual Disk Compactor",
         "width": 1000,
         "height": 720,

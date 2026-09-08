@@ -1,4 +1,4 @@
-#![windows_subsystem = "windows"]
+#![cfg_attr(not(debug_assertions), windows_subsystem = "windows")]
 
 use compact_vdisk_lib::admin::{check_admin_privileges, get_tool_availability, relaunch_as_administrator};
 use compact_vdisk_lib::compactor::execute_compaction;
@@ -13,8 +13,13 @@ fn check_admin() -> bool {
 }
 
 #[tauri::command]
-fn relaunch_as_admin() -> bool {
-    relaunch_as_administrator()
+fn relaunch_as_admin(app: AppHandle) -> bool {
+    if relaunch_as_administrator() {
+        app.exit(0);
+        true
+    } else {
+        false
+    }
 }
 
 #[tauri::command]
@@ -40,10 +45,16 @@ async fn compact_disk(app: AppHandle, disk_id: String, path: String) -> Result<C
 fn main() {
     #[cfg(target_os = "windows")]
     {
-        if !check_admin_privileges() {
-            if relaunch_as_administrator() {
-                std::process::exit(0);
-            }
+        // Prevent WebView2 initialization failures when running elevated or portable (Tauri issue #13926).
+        // Ensure WEBVIEW2_USER_DATA_FOLDER is configured to an accessible location if not set.
+        if std::env::var_os("WEBVIEW2_USER_DATA_FOLDER").is_none() {
+            let base_dir = std::env::var("LOCALAPPDATA")
+                .map(std::path::PathBuf::from)
+                .or_else(|_| std::env::var("TEMP").map(std::path::PathBuf::from))
+                .unwrap_or_else(|_| std::path::PathBuf::from("C:\\ProgramData"));
+            let udf = base_dir.join("CompactVdisk").join("EBWebView");
+            let _ = std::fs::create_dir_all(&udf);
+            std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", udf);
         }
     }
 

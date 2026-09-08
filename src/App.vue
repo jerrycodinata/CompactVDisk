@@ -86,6 +86,7 @@
     <!-- Disk Details Modal -->
     <DetailsModal
       :disk="selectedDiskForDetails"
+      :is-compacting="isCompacting"
       @close="selectedDiskForDetails = null"
       @compact="startCompaction"
     />

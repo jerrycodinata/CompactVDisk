@@ -52,6 +52,18 @@ pub fn is_tool_in_path(tool_name: &str) -> bool {
 pub fn check_admin_privileges() -> bool {
     #[cfg(target_os = "windows")]
     {
+        if std::env::args().any(|a| a == "--elevated") {
+            return true;
+        }
+
+        if create_command("fltmc")
+            .output()
+            .map(|out| out.status.success())
+            .unwrap_or(false)
+        {
+            return true;
+        }
+
         create_command("net")
             .arg("session")
             .output()

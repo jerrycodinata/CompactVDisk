@@ -27,10 +27,7 @@ pub fn relaunch_as_administrator() -> bool {
                 "-Command",
                 &format!("Start-Process -FilePath '{}' -ArgumentList '--elevated' -Verb RunAs", safe_exe_str),
             ]);
-            if let Ok(mut child) = cmd.spawn() {
-                let status = child.wait();
-                return status.map(|s| s.success()).unwrap_or(false);
-            }
+            return cmd.spawn().is_ok();
         }
     }
     false

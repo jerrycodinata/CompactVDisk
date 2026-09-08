@@ -45,16 +45,23 @@ async fn compact_disk(app: AppHandle, disk_id: String, path: String) -> Result<C
 fn main() {
     #[cfg(target_os = "windows")]
     {
-        // Prevent WebView2 initialization failures when running elevated or portable (Tauri issue #13926).
+        // Prevent WebView2 initialization failures when running elevated or portable.
         // Ensure WEBVIEW2_USER_DATA_FOLDER is configured to an accessible location if not set.
         if std::env::var_os("WEBVIEW2_USER_DATA_FOLDER").is_none() {
-            let base_dir = std::env::var("LOCALAPPDATA")
-                .map(std::path::PathBuf::from)
-                .or_else(|_| std::env::var("TEMP").map(std::path::PathBuf::from))
-                .unwrap_or_else(|_| std::path::PathBuf::from("C:\\ProgramData"));
-            let udf = base_dir.join("CompactVdisk").join("EBWebView");
-            let _ = std::fs::create_dir_all(&udf);
-            std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", udf);
+            let candidates = [
+                std::env::var("LOCALAPPDATA").ok().map(std::path::PathBuf::from),
+                std::env::var("TEMP").ok().map(std::path::PathBuf::from),
+                std::env::var("PROGRAMDATA").ok().map(std::path::PathBuf::from),
+                Some(std::env::temp_dir()),
+            ];
+
+            for candidate in candidates.into_iter().flatten() {
+                let udf = candidate.join("CompactVdisk").join("EBWebView");
+                if std::fs::create_dir_all(&udf).is_ok() {
+                    std::env::set_var("WEBVIEW2_USER_DATA_FOLDER", udf.to_string_lossy().to_string());
+                    break;
+                }
+            }
         }
     }
 
